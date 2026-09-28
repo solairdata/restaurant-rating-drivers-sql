@@ -50,8 +50,21 @@ COPY market_analysis.restaurants
 FROM '/path/to/Zomato_Restaurant_Dataset.csv'
 WITH (FORMAT csv, HEADER true, ENCODING 'UTF8');
 
--- The dataset stores only country codes, so a small lookup table is added.
--- Country names were matched using the currency and city columns.
+-- The dataset stores only country codes, not country names.
+-- This query lists the currency and cities for each code, which is enough
+-- to identify the country (e.g. Doha -> Qatar). Where several countries use
+-- "Dollar($)" (codes 14, 37, 184, 216), the cities decide.
+-- Note: code 162 has cities in the Philippines but the currency is wrongly
+-- recorded as "Botswana Pula" - an error in the source data.
+SELECT country_code,
+       currency,
+       COUNT(*)                         AS number_of_restaurants,
+       STRING_AGG(DISTINCT city, ', ')  AS cities
+FROM market_analysis.restaurants
+GROUP BY country_code, currency
+ORDER BY country_code;
+
+-- Based on the result above, a small lookup table with country names is added.
 DROP TABLE IF EXISTS market_analysis.countries;
 
 CREATE TABLE market_analysis.countries (
