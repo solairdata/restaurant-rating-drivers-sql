@@ -65,7 +65,7 @@ GROUP BY country_code, currency
 ORDER BY country_code;
 
 -- Based on the result above, a small lookup table with country names is added.
-DROP TABLE IF EXISTS market_analysis.countries;
+DROP TABLE IF EXISTS market_analysis.countries CASCADE;
 
 CREATE TABLE market_analysis.countries (
     country_code INTEGER PRIMARY KEY,
@@ -99,15 +99,18 @@ SELECT COUNT(*)                      AS total_rows,
        COUNT(DISTINCT restaurant_id) AS unique_ids
 FROM market_analysis.restaurants;
 
--- 1.2 Missing values in key columns
-SELECT COUNT(*) FILTER (WHERE cuisines IS NULL)          AS missing_cuisines,
-       COUNT(*) FILTER (WHERE city IS NULL)              AS missing_city,
-       COUNT(*) FILTER (WHERE aggregate_rating IS NULL)  AS missing_rating,
-       COUNT(*) FILTER (WHERE average_cost_for_two = 0)  AS zero_cost
+-- 1.2 Missing values: empty cells (NULL) and zeros that actually mean "no data"
+SELECT COUNT(*) FILTER (WHERE cuisines IS NULL)              AS missing_cuisines,
+       COUNT(*) FILTER (WHERE city IS NULL)                  AS missing_city,
+       COUNT(*) FILTER (WHERE aggregate_rating IS NULL)      AS missing_rating,
+       COUNT(*) FILTER (WHERE aggregate_rating = 0)          AS zero_rating,
+       COUNT(*) FILTER (WHERE average_cost_for_two IS NULL)  AS missing_cost,
+       COUNT(*) FILTER (WHERE average_cost_for_two = 0)      AS zero_cost
 FROM market_analysis.restaurants;
 
--- 1.3 A rating of 0 is NOT a bad rating - it means "Not rated".
---     These rows must be excluded from any rating average.
+-- 1.3 What does a rating of 0 mean? All 0 ratings are labelled 'Not rated',
+--     and the lowest real rating is 1.8 -> 0 means "no rating", not a bad rating.
+--     These rows are excluded from all rating averages.
 SELECT rating_text,
        COUNT(*)              AS number_of_restaurants,
        MIN(aggregate_rating) AS min_rating,
